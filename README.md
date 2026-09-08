@@ -1,3 +1,7 @@
+## Demo
+
+![Uptime Monitor demo](docs/dashboard.gif)
+
 # Uptime Monitor
 
 A backend service that monitors the availability of websites and network endpoints, built with **Spring Boot 3** and **Java 21**. It runs scheduled health checks against registered targets, records their status and response latency, exposes the data through a REST API and a live dashboard, and ships production-style operational metrics via Prometheus.

@@ -1,0 +1,12 @@
+# POSTGRES profile — Postgres + Flyway migrations. Used by docker-compose.
+# Activate with: SPRING_PROFILES_ACTIVE=postgres
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/uptime}
+    username: ${SPRING_DATASOURCE_USERNAME:uptime}
+    password: ${SPRING_DATASOURCE_PASSWORD:uptime}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true

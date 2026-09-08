@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: uptime-monitor
+  profiles:
+    default: local          # run with no args -> embedded H2, nothing to install
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+
+app:
+  scheduler:
+    tick-ms: 15000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: uptime-monitor
+
+logging:
+  level:
+    com.site.uptime: DEBUG

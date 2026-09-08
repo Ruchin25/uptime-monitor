@@ -1,0 +1,17 @@
+# LOCAL profile — runs with an embedded H2 database.
+# No Docker, no Postgres, nothing to install. Data is saved to ./data/uptime.mv.db
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/uptime;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update        # Hibernate builds the tables from the entity classes
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false            # the Flyway migration is Postgres-specific; off for H2
+  h2:
+    console:
+      enabled: true           # optional: browse the data at http://localhost:8080/h2-console

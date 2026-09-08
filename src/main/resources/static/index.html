@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uptime Monitor</title>
+<style>
+  :root{
+    --bg:#0e1420; --panel:#161f2e; --panel-2:#1c2839; --line:#26324a;
+    --ink:#e8eef7; --muted:#8a99b3; --faint:#5c6b86;
+    --up:#38d39f; --up-glow:rgba(56,211,159,.55);
+    --down:#ff5d6c; --down-glow:rgba(255,93,108,.5);
+    --unknown:#f2b155;
+    --accent:#5b8cff; --accent-2:#3a63d0;
+    --mono:ui-monospace,"Cascadia Code","Consolas",Menlo,monospace;
+    --sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #16233b 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; min-height:100vh; padding:28px 20px 60px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+  h1{font-size:22px;font-weight:650;letter-spacing:-.01em;margin:0}
+  .sub{color:var(--muted);font-size:13px;font-family:var(--mono)}
+
+  /* summary bar */
+  .summary{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    margin:18px 0 22px;padding:14px 16px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;
+  }
+  .stat{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px}
+  .stat b{font-size:18px;font-weight:650}
+  .stat .dot{width:9px;height:9px;border-radius:50%}
+  .dot.up{background:var(--up);box-shadow:0 0 0 4px var(--up-glow)}
+  .dot.down{background:var(--down);box-shadow:0 0 0 4px var(--down-glow)}
+  .dot.unknown{background:var(--unknown)}
+  .summary .spacer{margin-left:auto}
+  .refresh{color:var(--faint);font-family:var(--mono);font-size:12px}
+
+  /* add form */
+  form.add{
+    display:grid;grid-template-columns:1.4fr .8fr 2fr .8fr auto;gap:10px;
+    margin-bottom:22px;
+  }
+  @media(max-width:720px){form.add{grid-template-columns:1fr 1fr}}
+  input,select,button{font-family:var(--sans);font-size:14px}
+  input,select{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:9px;padding:10px 12px;width:100%;
+  }
+  input::placeholder{color:var(--faint)}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  button{cursor:pointer;border:none;border-radius:9px;font-weight:600}
+  .btn-add{background:var(--accent);color:#fff;padding:10px 16px}
+  .btn-add:hover{background:var(--accent-2)}
+
+  /* status wall */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px;position:relative;overflow:hidden;transition:border-color .2s;
+  }
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+  .card.up::before{background:var(--up)}
+  .card.down::before{background:var(--down)}
+  .card.unknown::before{background:var(--unknown)}
+  .card .top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .pulse{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+  .pulse.up{background:var(--up);box-shadow:0 0 0 0 var(--up-glow);animation:beat 2s infinite}
+  .pulse.down{background:var(--down)}
+  .pulse.unknown{background:var(--unknown)}
+  @keyframes beat{
+    0%{box-shadow:0 0 0 0 var(--up-glow)}
+    70%{box-shadow:0 0 0 9px transparent}
+    100%{box-shadow:0 0 0 0 transparent}
+  }
+  @media(prefers-reduced-motion:reduce){.pulse.up{animation:none}}
+  .name{font-weight:640;font-size:15px}
+  .type{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+    color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+  .target{font-family:var(--mono);font-size:12px;color:var(--muted);
+    word-break:break-all;margin-bottom:14px}
+  .metrics{display:flex;gap:18px;font-family:var(--mono);font-size:12px;margin-bottom:14px}
+  .metrics .k{color:var(--faint);display:block;font-size:10px;letter-spacing:.05em;margin-bottom:2px}
+  .metrics .v{font-size:15px;font-weight:600}
+  .state-word{font-family:var(--sans);font-weight:650;font-size:12px;letter-spacing:.03em}
+  .state-word.up{color:var(--up)} .state-word.down{color:var(--down)} .state-word.unknown{color:var(--unknown)}
+  .actions{display:flex;gap:8px}
+  .btn-sm{background:var(--panel-2);color:var(--ink);border:1px solid var(--line);padding:7px 12px;font-size:12.5px;font-weight:600}
+  .btn-sm:hover{border-color:var(--accent);color:#fff}
+  .btn-danger:hover{border-color:var(--down);color:var(--down)}
+
+  /* states */
+  .empty,.banner{border-radius:12px;padding:22px;text-align:center;font-size:14px}
+  .empty{background:var(--panel);border:1px dashed var(--line);color:var(--muted)}
+  .banner{background:rgba(255,93,108,.08);border:1px solid rgba(255,93,108,.3);color:#ffb3ba;margin-bottom:18px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Uptime Monitor</h1>
+    <span class="sub">live status board</span>
+  </header>
+
+  <div id="banner" class="banner"></div>
+
+  <div class="summary">
+    <span class="stat"><span class="dot up"></span><b id="c-up">0</b> up</span>
+    <span class="stat"><span class="dot down"></span><b id="c-down">0</b> down</span>
+    <span class="stat"><span class="dot unknown"></span><b id="c-unknown">0</b> unknown</span>
+    <span class="spacer"></span>
+    <span class="refresh" id="refresh">connecting…</span>
+  </div>
+
+  <form class="add" id="add-form" autocomplete="off">
+    <input id="f-name" placeholder="Name (e.g. Google)" required>
+    <select id="f-type"><option value="HTTP">HTTP</option><option value="TCP">TCP</option></select>
+    <input id="f-target" placeholder="https://example.com  or  host:port" required>
+    <input id="f-interval" type="number" min="5" value="30" title="Check interval (seconds)">
+    <button class="btn-add" type="submit">Add monitor</button>
+  </form>
+
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" style="display:none">No monitors yet. Add one above to start watching.</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function api(path, opts){
+  const res = await fetch(path, opts);
+  if(!res.ok) throw new Error(await res.text() || res.status);
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
+function metric(k, v){ return `<div><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+
+function timeAgo(iso){
+  if(!iso) return "never";
+  const s = Math.round((Date.now() - new Date(iso).getTime())/1000);
+  if(s < 60) return s + "s ago";
+  if(s < 3600) return Math.round(s/60) + "m ago";
+  return Math.round(s/3600) + "h ago";
+}
+
+function card(m){
+  const cls = m.status.toLowerCase();
+  const latency = m.latencyMs == null ? "—" : m.latencyMs + " ms";
+  const code = m.statusCode == null ? "—" : m.statusCode;
+  return `<div class="card ${cls}">
+    <div class="top">
+      <span class="pulse ${cls}"></span>
+      <span class="name">${escapeHtml(m.name)}</span>
+      <span class="type">${escapeHtml(m.target.startsWith("http")?"HTTP":"TCP")}</span>
+    </div>
+    <div class="target">${escapeHtml(m.target)}</div>
+    <div class="metrics">
+      ${metric("STATUS", `<span class="state-word ${cls}">${m.status}</span>`)}
+      ${metric("LATENCY", latency)}
+      ${metric("CODE", code)}
+      ${metric("LAST SEEN", timeAgo(m.lastCheckedAt))}
+    </div>
+    <div class="actions">
+      <button class="btn-sm" onclick="checkNow(${m.monitorId})">Check now</button>
+      <button class="btn-sm btn-danger" onclick="remove(${m.monitorId})">Remove</button>
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function refresh(){
+  try{
+    const list = await api('/api/status');
+    $('banner').style.display = 'none';
+    $('grid').innerHTML = list.map(card).join('');
+    $('empty').style.display = list.length ? 'none' : 'block';
+    $('c-up').textContent = list.filter(m=>m.status==='UP').length;
+    $('c-down').textContent = list.filter(m=>m.status==='DOWN').length;
+    $('c-unknown').textContent = list.filter(m=>m.status==='UNKNOWN').length;
+    $('refresh').textContent = 'updated ' + new Date().toLocaleTimeString();
+  }catch(e){
+    $('banner').style.display = 'block';
+    $('banner').textContent = "Can't reach the service on :8080 — is the app still running? Retrying…";
+    $('refresh').textContent = 'offline';
+  }
+}
+
+async function checkNow(id){
+  try{ await api('/api/monitors/'+id+'/check',{method:'POST'}); setTimeout(refresh,400); }
+  catch(e){ alert('Check failed: '+e.message); }
+}
+async function remove(id){
+  try{ await api('/api/monitors/'+id,{method:'DELETE'}); refresh(); }
+  catch(e){ alert('Remove failed: '+e.message); }
+}
+
+$('add-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const type = $('f-type').value;
+  const body = {
+    name: $('f-name').value.trim(),
+    type: type,
+    target: $('f-target').value.trim(),
+    intervalSeconds: Number($('f-interval').value) || 30,
+    timeoutMs: 5000,
+    expectedStatus: type==='HTTP' ? 200 : null
+  };
+  try{
+    await api('/api/monitors',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    $('f-name').value=''; $('f-target').value='';
+    refresh();
+  }catch(err){ alert('Could not add monitor: '+err.message); }
+});
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

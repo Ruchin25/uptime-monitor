@@ -112,8 +112,6 @@ The app serves a live status board at the root URL. It lists every monitor with 
 
 ![Uptime Monitor dashboard](docs/dashboard.png)
 
-> _To add the screenshot: capture the running dashboard, save it as `docs/dashboard.png` in the repo, then commit._
-
 ---
 
 ## Monitoring & metrics
@@ -146,7 +144,3 @@ uptime-monitor/
 ```
 
 ---
-
-## License
-
-Released under the MIT License.
